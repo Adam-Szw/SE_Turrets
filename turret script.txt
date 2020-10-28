@@ -1,0 +1,67 @@
+public Program()
+{
+    Runtime.UpdateFrequency = UpdateFrequency.Update10;
+}
+
+
+public void Main(string argument)
+{
+	float pi = 3.14159265359f;
+    IMyLargeTurretBase turret = (IMyLargeTurretBase)GridTerminalSystem.GetBlockWithName("Targeter Turret");
+	float azimuth = turret.Azimuth/(2*pi);
+	while(azimuth>0.5){
+		azimuth-=1;
+	}
+	while(azimuth<-0.5){
+		azimuth+=1;
+	}
+	azimuth*=-360;
+	float elevation = turret.Elevation/(2*pi);
+	elevation*=360;
+	
+	IMyMotorAdvancedStator turretRotor = (IMyMotorAdvancedStator)GridTerminalSystem.GetBlockWithName("Advanced Rotor");
+	float turretAngle = turretRotor.Angle/(2*pi)*360;
+	if(turretAngle>180f){
+		turretAngle = turretAngle-360f;
+	}
+	if(turretAngle<-180f){
+		turretAngle = turretAngle+360f;
+	}
+
+	List<IMyTerminalBlock> gyroscope_list_a = new List<IMyTerminalBlock>();
+	GridTerminalSystem.GetBlockGroupWithName("Turret Gyroscopes A").GetBlocksOfType<IMyGyro>(gyroscope_list_a);
+	List<IMyTerminalBlock> gyroscope_list_b = new List<IMyTerminalBlock>();
+	GridTerminalSystem.GetBlockGroupWithName("Turret Gyroscopes B").GetBlocksOfType<IMyGyro>(gyroscope_list_b);
+
+	float horiDifference = azimuth-turretAngle;
+	turretRotor.TargetVelocityRPM = horiDifference*60/180f;
+	for(int i = 0; i < gyroscope_list_a.Count; i++) {
+		IMyGyro gyro = (IMyGyro)gyroscope_list_a[i];
+		gyro.Pitch = -(float)horiDifference*3f/180f;
+	}
+	for(int i = 0; i < gyroscope_list_b.Count; i++) {
+		IMyGyro gyro = (IMyGyro)gyroscope_list_b[i];
+		gyro.Pitch = (float)horiDifference*3f/180f;
+	}
+	
+	IMyMotorStator barrelRotor = (IMyMotorStator)GridTerminalSystem.GetBlockWithName("Rotor Barrel");
+	IMyMotorStator barrelRotor2 = (IMyMotorStator)GridTerminalSystem.GetBlockWithName("Rotor Barrel 2");
+	float barrelAngle = barrelRotor.Angle/(2*pi)*360;
+	barrelAngle-=180.0f;
+	if(barrelAngle>180f){
+		barrelAngle = barrelAngle-360f;
+	}
+	if(barrelAngle<-180f){
+		barrelAngle = barrelAngle+360f;
+	}
+	
+	float vertDifference = elevation-barrelAngle;
+	List<IMyTerminalBlock> piston_list = new List<IMyTerminalBlock>();
+	GridTerminalSystem.GetBlockGroupWithName("p2").GetBlocksOfType<IMyPistonBase>(piston_list);
+	for(int i = 0; i < piston_list.Count; i++) {
+		IMyPistonBase piston = (IMyPistonBase)piston_list[i];
+		piston.Velocity = (float)vertDifference/180f*1.5f*3f;
+	}
+	barrelRotor.TargetVelocityRPM = vertDifference/180f*7.5f*3f;
+	barrelRotor2.TargetVelocityRPM = -vertDifference/180f*7.5f*3f;
+}
